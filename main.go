@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/zohaibsoomro/golangpractice/api"
+	"github.com/zohaibsoomro/users_api_golang/api"
 )
 
 func main() {

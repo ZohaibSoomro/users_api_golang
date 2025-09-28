@@ -6,8 +6,8 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/zohaibsoomro/golangpractice/models"
-	"github.com/zohaibsoomro/golangpractice/utils"
+	"github.com/zohaibsoomro/users_api_golang/models"
+	"github.com/zohaibsoomro/users_api_golang/utils"
 )
 
 var userDb = utils.NewUsersDB()

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/zohaibsoomro/golangpractice/models"
+	"github.com/zohaibsoomro/users_api_golang/models"
 )
 
 type UsersDB struct {
