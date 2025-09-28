@@ -1,4 +1,21 @@
-```markdown
+I see the issue 👍 — your `README.md` isn’t rendering correctly because of a **mismatch in code block fences**.
+
+Here are the main problems:
+
+1. In **Project Structure**, you opened with ` ``` ` but closed with ```` `````` (four backticks).
+
+   * Markdown expects the **same number of backticks** to open and close a code block.
+   * Use triple backticks (` ``` `) consistently.
+
+2. In **Get All Users**, you opened with ` ```http ` but closed with ```` `````` (four backticks).
+
+3. The extra backticks at the very end (` ``` ` after Contributing) are unnecessary — they make the file end with an extra code block.
+
+---
+
+✅ Fixed version of your `README.md`:
+
+````markdown
 # 👥 Users API in Golang  
 
 A simple **RESTful API** built with **Golang** that manages user records stored in a JSON file.  
@@ -16,8 +33,7 @@ This project is designed for learning purposes to practice Go, APIs, and project
 ---
 
 ## 📂 Project Structure  
-```
-
+```bash
 .
 ├── api/          # API layer (handlers & routing)
 ├── models/       # Data models (User struct)
@@ -25,17 +41,17 @@ This project is designed for learning purposes to practice Go, APIs, and project
 ├── users.json    # Mock database (users stored here)
 ├── main.go       # Application entry point
 └── go.mod        # Go module file
-
 ````
 
 ---
 
-## ⚡ API Endpoints  
+## ⚡ API Endpoints
 
-### 1. Get All Users  
+### 1. Get All Users
+
 ```http
 GET /users
-````
+```
 
 ### 2. Get User by Email
 
@@ -127,7 +143,8 @@ curl http://localhost:8080/users
 
 Pull requests are welcome! Feel free to fork the repo and submit a PR.
 
-
 ```
+
+---
 
 ```
