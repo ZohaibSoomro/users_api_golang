@@ -1,4 +1,3 @@
-````markdown
 # 👥 Users API in Golang  
 
 A simple **RESTful API** built with **Golang** that manages user records stored in a JSON file.  
@@ -126,8 +125,3 @@ curl http://localhost:8080/users
 
 Pull requests are welcome! Feel free to fork the repo and submit a PR.
 
-```
-
----
-
-```
