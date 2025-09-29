@@ -1,1 +1,27 @@
-[{"id":2,"name":"Charlie","email":"charlie@example.comm"},{"id":3,"name":"aibee","email":"aibee@example.comm"},{"id":4,"name":"khan","email":"khan@example.comm"}]
+[
+	{
+		"id": 2,
+		"name": "Charlie",
+		"email": "charlie@example.comm"
+	},
+	{
+		"id": 3,
+		"name": "Aibee",
+		"email": "aibee@gmail.comm"
+	},
+	{
+		"id": 4,
+		"name": "khan",
+		"email": "khan@example.comm"
+	},
+	{
+		"id": 5,
+		"name": "hassan",
+		"email": "hassan@example.comm"
+	},
+	{
+		"id": 6,
+		"name": "zohaib",
+		"email": "zohaib@gmail.comm"
+	}
+]

@@ -6,6 +6,7 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/zohaibsoomro/users_api_golang/models"
 	"github.com/zohaibsoomro/users_api_golang/utils"
 )
@@ -22,14 +23,17 @@ func NewApi(address string) *Api {
 	}
 }
 
-func (api *Api) RegisterHandlers() {
-	http.HandleFunc("/", helloWorld)
-	http.HandleFunc("/users", getAllUsers)
-	http.HandleFunc("/users/", getUserWithEmail)
-	http.HandleFunc("/users/add", addUser)
-	http.HandleFunc("/users/update/", updateUserWithEmail)
-	http.HandleFunc("/users/delete/", deleteUserWithEmail)
+func (api *Api) RegisterHandlers() *mux.Router {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/", helloWorld)
+	router.HandleFunc("/users", getAllUsers)
+	router.HandleFunc("/users/add", addUser)
+	router.HandleFunc("/users/{email}", getUserWithEmail)
+	router.HandleFunc("/users/update/{email}", updateUserWithEmail)
+	router.HandleFunc("/users/delete/{email}", deleteUserWithEmail)
 	userDb.LoadAllUsers()
+	return router
 }
 
 func helloWorld(w http.ResponseWriter, req *http.Request) {
@@ -52,8 +56,8 @@ func getUserWithEmail(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Extract email from path
-	email := strings.TrimPrefix(req.URL.Path, "/users/")
-	email = strings.ToLower(strings.TrimSpace(email))
+
+	email := strings.ToLower(strings.TrimSpace(mux.Vars(req)["email"]))
 
 	if email == "" {
 		writeError(w, http.StatusBadRequest, "Email parameter is required.")
@@ -81,8 +85,7 @@ func updateUserWithEmail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	email := strings.TrimPrefix(req.URL.Path, "/users/update/")
-	email = strings.TrimSpace(email)
+	email := strings.TrimSpace(mux.Vars(req)["email"])
 
 	if email == "" {
 		writeError(w, http.StatusBadRequest, "email param is missing")
@@ -100,6 +103,11 @@ func updateUserWithEmail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if _, err := mail.ParseAddress(user.Email); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid email in body: "+strings.TrimPrefix(err.Error(), "mail: "))
+		return
+	}
+
 	if err := userDb.UpdateUserByEmail(email, &user); err != nil {
 		writeError(w, http.StatusInternalServerError, "Unable to update user: "+err.Error())
 		return
@@ -114,8 +122,7 @@ func deleteUserWithEmail(w http.ResponseWriter, req *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "Invalid request method")
 		return
 	}
-	email := strings.TrimPrefix(req.URL.Path, "/users/delete/")
-	email = strings.TrimSpace(email)
+	email := strings.TrimSpace(mux.Vars(req)["email"])
 
 	if _, err := mail.ParseAddress(email); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid email entered: "+err.Error())

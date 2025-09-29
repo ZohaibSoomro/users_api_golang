@@ -7,12 +7,14 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/zohaibsoomro/users_api_golang/models"
 )
 
 type UsersDB struct {
 	users []models.User
+	lock  *sync.Mutex
 }
 
 func NewUsersDB() *UsersDB {
@@ -57,6 +59,7 @@ func (db *UsersDB) GetUserByEmail(email string) (int, *models.User) {
 }
 
 func (db *UsersDB) AddUser(user models.User) error {
+
 	_, u := db.GetUserByEmail(user.Email)
 	if u != nil {
 		return errors.New("user already exists with that email")
@@ -72,10 +75,13 @@ func (db *UsersDB) AddUser(user models.User) error {
 		return err
 	}
 	fmt.Println("User added.")
+	db.LoadAllUsers()
 	return nil
 }
 
 func (db *UsersDB) DeleteUserByEmail(email string) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 	email = strings.TrimSpace(email)
 	i, u := db.GetUserByEmail(email)
 	if u != nil {
@@ -97,6 +103,8 @@ func (db *UsersDB) DeleteUserByEmail(email string) error {
 }
 
 func (db *UsersDB) UpdateUserByEmail(email string, u *models.User) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 	email = strings.TrimSpace(email)
 	idx, user := db.GetUserByEmail(email)
 
