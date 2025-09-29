@@ -27,11 +27,11 @@ func (api *Api) RegisterHandlers() *mux.Router {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", helloWorld)
-	router.HandleFunc("/users", getAllUsers)
-	router.HandleFunc("/users/add", addUser)
-	router.HandleFunc("/users/{email}", getUserWithEmail)
-	router.HandleFunc("/users/update/{email}", updateUserWithEmail)
-	router.HandleFunc("/users/delete/{email}", deleteUserWithEmail)
+	router.HandleFunc("/users", getAllUsers).Methods(http.MethodGet)
+	router.HandleFunc("/users/add", addUser).Methods(http.MethodPost)
+	router.HandleFunc("/users/{email}", getUserWithEmail).Methods(http.MethodGet)
+	router.HandleFunc("/users/update/{email}", updateUserWithEmail).Methods(http.MethodPut)
+	router.HandleFunc("/users/delete/{email}", deleteUserWithEmail).Methods(http.MethodDelete)
 	userDb.LoadAllUsers()
 	return router
 }
@@ -41,19 +41,12 @@ func helloWorld(w http.ResponseWriter, req *http.Request) {
 }
 
 func getAllUsers(w http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodGet {
-		users := userDb.GetAllUsers()
+	users := userDb.GetAllUsers()
 
-		writeJSON(w, http.StatusOK, users)
-	} else {
-		writeError(w, http.StatusMethodNotAllowed, "Invalid request method.")
-	}
+	writeJSON(w, http.StatusOK, users)
+
 }
 func getUserWithEmail(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "Invalid request method.")
-		return
-	}
 
 	// Extract email from path
 
@@ -80,10 +73,6 @@ func getUserWithEmail(w http.ResponseWriter, req *http.Request) {
 }
 
 func updateUserWithEmail(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPut {
-		writeError(w, http.StatusMethodNotAllowed, "Invalid request method")
-		return
-	}
 
 	email := strings.TrimSpace(mux.Vars(req)["email"])
 
@@ -113,15 +102,12 @@ func updateUserWithEmail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, "User updated successfully!")
+	writeJSON(w, http.StatusOK, map[string]string{"message": "User updated successfully!"})
 
 }
 
 func deleteUserWithEmail(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodDelete {
-		writeError(w, http.StatusMethodNotAllowed, "Invalid request method")
-		return
-	}
+
 	email := strings.TrimSpace(mux.Vars(req)["email"])
 
 	if _, err := mail.ParseAddress(email); err != nil {
@@ -138,10 +124,7 @@ func deleteUserWithEmail(w http.ResponseWriter, req *http.Request) {
 }
 
 func addUser(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "invalid method type")
-		return
-	}
+
 	var u models.User
 	if err := json.NewDecoder(req.Body).Decode(&u); err != nil {
 		writeError(w, http.StatusBadRequest, "Unable to parse body: "+err.Error())

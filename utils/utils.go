@@ -52,19 +52,24 @@ func (db *UsersDB) GetUserByEmail(email string) (int, *models.User) {
 	email = strings.TrimSpace(email)
 	for idx, user := range db.users {
 		if strings.EqualFold(email, user.Email) {
-			return idx, &user
+			return idx, &db.users[idx]
 		}
 	}
 	return -1, nil
 }
 
 func (db *UsersDB) AddUser(user models.User) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 
 	_, u := db.GetUserByEmail(user.Email)
 	if u != nil {
 		return errors.New("user already exists with that email")
 	}
-	id := db.users[len(db.users)-1].Id + 1
+	id := 1
+	if len(db.users) > 0 {
+		id = db.users[len(db.users)-1].Id + 1
+	}
 	user.Id = id
 	db.users = append(db.users, user)
 	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_WRONLY, 0644)
