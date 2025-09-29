@@ -59,6 +59,18 @@ Content-Type: application/json
 DELETE /users/delete/{email}
 ```
 
+### 4. Add User
+
+```http
+POST /users/add
+Content-Type: application/json
+
+{
+  "name": "New Name",
+  "email": "new@email.com"
+}
+```
+
 ---
 
 ## 🛠️ Installation & Setup

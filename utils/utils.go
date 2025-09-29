@@ -56,6 +56,25 @@ func (db *UsersDB) GetUserByEmail(email string) (int, *models.User) {
 	return -1, nil
 }
 
+func (db *UsersDB) AddUser(user models.User) error {
+	_, u := db.GetUserByEmail(user.Email)
+	if u != nil {
+		return errors.New("user already exists with that email")
+	}
+	id := db.users[len(db.users)-1].Id + 1
+	user.Id = id
+	db.users = append(db.users, user)
+	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	if err := json.NewEncoder(f).Encode(db.users); err != nil {
+		return err
+	}
+	fmt.Println("User added.")
+	return nil
+}
+
 func (db *UsersDB) DeleteUserByEmail(email string) error {
 	email = strings.TrimSpace(email)
 	i, u := db.GetUserByEmail(email)

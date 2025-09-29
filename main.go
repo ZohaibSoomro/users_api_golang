@@ -13,6 +13,5 @@ func main() {
 	api.RegisterHandlers()
 	log.Println("Started server at :8080")
 	log.Fatal(http.ListenAndServe(api.Address, nil))
-	log.Println("Starting stopped.")
 
 }

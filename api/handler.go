@@ -26,6 +26,7 @@ func (api *Api) RegisterHandlers() {
 	http.HandleFunc("/", helloWorld)
 	http.HandleFunc("/users", getAllUsers)
 	http.HandleFunc("/users/", getUserWithEmail)
+	http.HandleFunc("/users/add", addUser)
 	http.HandleFunc("/users/update/", updateUserWithEmail)
 	http.HandleFunc("/users/delete/", deleteUserWithEmail)
 	userDb.LoadAllUsers()
@@ -127,6 +128,24 @@ func deleteUserWithEmail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, "User deleted successfully!")
+}
+
+func addUser(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "invalid method type")
+		return
+	}
+	var u models.User
+	if err := json.NewDecoder(req.Body).Decode(&u); err != nil {
+		writeError(w, http.StatusBadRequest, "Unable to parse body: "+err.Error())
+		return
+	}
+	err := userDb.AddUser(u)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Unable to add user: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "user added successfully."})
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
