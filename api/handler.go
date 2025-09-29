@@ -140,6 +140,12 @@ func addUser(w http.ResponseWriter, req *http.Request) {
 		writeError(w, http.StatusBadRequest, "Unable to parse body: "+err.Error())
 		return
 	}
+	u.Email = strings.TrimSpace(u.Email)
+	if _, err := mail.ParseAddress(u.Email); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid email entered: "+err.Error())
+		return
+	}
+
 	err := userDb.AddUser(u)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Unable to add user: "+err.Error())

@@ -6,6 +6,7 @@ This project is designed for learning purposes to practice Go, APIs, and project
 ---
 
 ## 🚀 Features  
+- Add a user ＋  
 - List all users 📋  
 - Get user by email 🔍  
 - Update user details ✏️  
