@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -13,29 +12,32 @@ import (
 )
 
 type UsersDB struct {
-	users []models.User
-	lock  *sync.Mutex
+	users    []models.User
+	lock     *sync.Mutex
+	filename string
 }
 
-func NewUsersDB() *UsersDB {
-	return &UsersDB{
-		users: make([]models.User, 0),
+func NewUsersDB(file string) *UsersDB {
+	db := &UsersDB{
+		users:    make([]models.User, 0),
+		lock:     &sync.Mutex{},
+		filename: file,
 	}
+	db.LoadAllUsers()
+	return db
 }
 
-const fileName = "users.json"
-
-func (db *UsersDB) LoadAllUsers() {
-	bytes, err := os.ReadFile(fileName)
-	handleError("Unable to read file", err)
-	err = json.Unmarshal(bytes, &db.users)
-	handleError("Unable to parse json", err)
-}
-
-func handleError(msg string, err error) {
+func (db *UsersDB) LoadAllUsers() error {
+	bytes, err := os.ReadFile(db.filename)
 	if err != nil {
-		log.Fatalf("%v: %v", msg, err)
+		return err
 	}
+	err = json.Unmarshal(bytes, &db.users)
+	if err != nil {
+
+		return fmt.Errorf("unable to parse json: %w", err)
+	}
+	return nil
 }
 
 func (db *UsersDB) ListAllUsers() {
@@ -72,13 +74,14 @@ func (db *UsersDB) AddUser(user models.User) error {
 	}
 	user.Id = id
 	db.users = append(db.users, user)
-	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_WRONLY, 0644)
+	bytes, err := json.MarshalIndent(&db.users, "", "\t")
 	if err != nil {
 		return err
 	}
-	if err := json.NewEncoder(f).Encode(db.users); err != nil {
+	if err := os.WriteFile(db.filename, bytes, 0644); err != nil {
 		return err
 	}
+
 	fmt.Println("User added.")
 	db.LoadAllUsers()
 	return nil
@@ -92,9 +95,13 @@ func (db *UsersDB) DeleteUserByEmail(email string) error {
 	if u != nil {
 		db.users = append(db.users[:i], db.users[i+1:]...)
 		bytes, err := json.MarshalIndent(&db.users, "", "\t")
-		handleError("Unable to parse string to Json", err)
-		err = os.WriteFile(fileName, bytes, 0644)
-		handleError("Unable to write json to file", err)
+		if err != nil {
+			return fmt.Errorf("unable to parse string to json: %w", err)
+		}
+		err = os.WriteFile(db.filename, bytes, 0644)
+		if err != nil {
+			return fmt.Errorf("unable to write json to file: %w", err)
+		}
 		fmt.Println("Deleted User\nName:", u.Name, "\nEmail:", u.Email)
 		db.LoadAllUsers()
 		err = nil
@@ -121,9 +128,13 @@ func (db *UsersDB) UpdateUserByEmail(email string, u *models.User) error {
 	db.users[idx].Name = u.Name
 
 	bytes, err := json.MarshalIndent(&db.users, "", "\t")
-	handleError("Unable to parse string to Json", err)
-	err = os.WriteFile(fileName, bytes, 0644)
-	handleError("Unable to write json to file", err)
+	if err != nil {
+		return fmt.Errorf("unable to parse string to Json: %w", err)
+	}
+	err = os.WriteFile(db.filename, bytes, 0644)
+	if err != nil {
+		return fmt.Errorf("unable to write json to file: %w", err)
+	}
 	fmt.Println("User Updated")
 
 	db.LoadAllUsers()

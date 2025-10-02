@@ -1,17 +1,16 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/mail"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/zohaibsoomro/users_api_golang/models"
 	"github.com/zohaibsoomro/users_api_golang/utils"
 )
 
-var userDb = utils.NewUsersDB()
+var userDb = utils.NewUsersDB("/Users/zohaib/Documents/Golang/GolangPractice/users.json")
 
 type Api struct {
 	Address string
@@ -23,139 +22,126 @@ func NewApi(address string) *Api {
 	}
 }
 
-func (api *Api) RegisterHandlers() *mux.Router {
-	router := mux.NewRouter()
+func (api *Api) RegisterHandlers() *gin.Engine {
+	server := gin.Default()
 
-	router.HandleFunc("/", helloWorld)
-	router.HandleFunc("/users", getAllUsers).Methods(http.MethodGet)
-	router.HandleFunc("/users/add", addUser).Methods(http.MethodPost)
-	router.HandleFunc("/users/{email}", getUserWithEmail).Methods(http.MethodGet)
-	router.HandleFunc("/users/update/{email}", updateUserWithEmail).Methods(http.MethodPut)
-	router.HandleFunc("/users/delete/{email}", deleteUserWithEmail).Methods(http.MethodDelete)
-	userDb.LoadAllUsers()
-	return router
+	server.GET("/", helloWorld)
+	server.GET("/users", getAllUsers)
+	server.POST("/users/add", addUser)
+	server.GET("/users/:email", getUserWithEmail)
+	server.PUT("/users/update/:email", updateUserWithEmail)
+	server.DELETE("/users/delete/:email", deleteUserWithEmail)
+	return server
 }
 
-func helloWorld(w http.ResponseWriter, req *http.Request) {
-	w.Write([]byte(`<h1>Welcome Back!</h1>`))
+func helloWorld(c *gin.Context) {
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(`<h1>Welcome Back!</h1>`))
 }
 
-func getAllUsers(w http.ResponseWriter, req *http.Request) {
+func getAllUsers(c *gin.Context) {
 	users := userDb.GetAllUsers()
 
-	writeJSON(w, http.StatusOK, users)
+	c.JSON(http.StatusOK, users)
 
 }
-func getUserWithEmail(w http.ResponseWriter, req *http.Request) {
+func getUserWithEmail(c *gin.Context) {
 
-	// Extract email from path
-
-	email := strings.ToLower(strings.TrimSpace(mux.Vars(req)["email"]))
+	email := strings.ToLower(strings.TrimSpace(c.Param("email")))
 
 	if email == "" {
-		writeError(w, http.StatusBadRequest, "Email parameter is required.")
+		writeError(c, http.StatusBadRequest, "Email parameter is required.")
 		return
 	}
 
 	if _, err := mail.ParseAddress(email); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid email entered: "+strings.TrimPrefix(err.Error(), "mail: "))
+		writeError(c, http.StatusBadRequest, "Invalid email entered: "+strings.TrimPrefix(err.Error(), "mail: "))
 		return
 	}
 
 	// Lookup user
 	_, user := userDb.GetUserByEmail(email)
 	if user == nil {
-		writeError(w, http.StatusNotFound, "User not found.")
+		writeError(c, http.StatusNotFound, "User not found!")
+
 		return
 	}
 
-	writeJSON(w, http.StatusOK, user)
+	c.JSON(http.StatusOK, user)
 }
 
-func updateUserWithEmail(w http.ResponseWriter, req *http.Request) {
+func updateUserWithEmail(c *gin.Context) {
 
-	email := strings.TrimSpace(mux.Vars(req)["email"])
+	email := strings.TrimSpace(c.Param("email"))
 
 	if email == "" {
-		writeError(w, http.StatusBadRequest, "email param is missing")
+		writeError(c, http.StatusBadRequest, "email param is missing")
 		return
 	}
 
 	if _, err := mail.ParseAddress(email); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid email entered: "+strings.TrimPrefix(err.Error(), "mail: "))
+		writeError(c, http.StatusBadRequest, "Invalid email entered: "+strings.TrimPrefix(err.Error(), "mail: "))
 		return
 	}
 
 	var user models.User
-	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		writeError(w, http.StatusBadRequest, "Unable to Decode Request Body")
+	if err := c.ShouldBindBodyWithJSON(&user); err != nil {
+		writeError(c, http.StatusBadRequest, "Unable to Decode Request Body")
 		return
 	}
 
 	if _, err := mail.ParseAddress(user.Email); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid email in body: "+strings.TrimPrefix(err.Error(), "mail: "))
+		writeError(c, http.StatusBadRequest, "Invalid email in body: "+strings.TrimPrefix(err.Error(), "mail: "))
 		return
 	}
 
 	if err := userDb.UpdateUserByEmail(email, &user); err != nil {
-		writeError(w, http.StatusInternalServerError, "Unable to update user: "+err.Error())
+		writeError(c, http.StatusInternalServerError, "Unable to update user: "+err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"message": "User updated successfully!"})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully!"})
 
 }
 
-func deleteUserWithEmail(w http.ResponseWriter, req *http.Request) {
+func deleteUserWithEmail(c *gin.Context) {
 
-	email := strings.TrimSpace(mux.Vars(req)["email"])
+	email := strings.TrimSpace(c.Param("email"))
 
 	if _, err := mail.ParseAddress(email); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid email entered: "+err.Error())
+		writeError(c, http.StatusBadRequest, "Invalid email entered: "+err.Error())
 		return
 	}
 
 	err := userDb.DeleteUserByEmail(email)
 	if err != nil {
-		writeError(w, http.StatusNotAcceptable, "Error while deleting user: "+err.Error())
+		writeError(c, http.StatusNotAcceptable, "Error while deleting user: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, "User deleted successfully!")
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully!"})
 }
 
-func addUser(w http.ResponseWriter, req *http.Request) {
+func addUser(c *gin.Context) {
 
 	var u models.User
-	if err := json.NewDecoder(req.Body).Decode(&u); err != nil {
-		writeError(w, http.StatusBadRequest, "Unable to parse body: "+err.Error())
+	if err := c.ShouldBindBodyWithJSON(&u); err != nil {
+		writeError(c, http.StatusBadRequest, "Unable to parse body: "+err.Error())
 		return
 	}
 	u.Email = strings.TrimSpace(u.Email)
 	if _, err := mail.ParseAddress(u.Email); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid email entered: "+err.Error())
+		writeError(c, http.StatusBadRequest, "Invalid email entered: "+err.Error())
 		return
 	}
 
 	err := userDb.AddUser(u)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Unable to add user: "+err.Error())
+		writeError(c, http.StatusInternalServerError, "Unable to add user: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "user added successfully."})
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if data != nil {
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			http.Error(w, `{"error":"failed to encode json"}`, http.StatusInternalServerError)
-		}
-	}
+	c.JSON(http.StatusOK, gin.H{"message": "user added successfully."})
 }
 
 // WriteError writes an error response in JSON.
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
+func writeError(c *gin.Context, status int, msg string) {
+	c.JSON(status, gin.H{"error": msg})
 }

@@ -1,18 +1,13 @@
 [
 	{
-		"id": 2,
-		"name": "Charlie",
-		"email": "charlie@example.comm"
-	},
-	{
 		"id": 3,
 		"name": "Aibee",
 		"email": "aibee@gmail.comm"
 	},
 	{
 		"id": 4,
-		"name": "khan",
-		"email": "khan@example.comm"
+		"name": "khanam",
+		"email": "khan@example.com"
 	},
 	{
 		"id": 5,
@@ -22,6 +17,6 @@
 	{
 		"id": 6,
 		"name": "zohaib",
-		"email": "zohaib@gmail.comm"
+		"email": "zohaib@example.comm"
 	}
 ]
