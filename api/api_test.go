@@ -28,7 +28,7 @@ func TestGetAllUsers(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &users)
 	assert.NoError(t, err)
 
-	assert.Greater(t, 0, len(users))
+	assert.Greater(t, len(users), 0)
 	assert.True(t, strings.Contains(users[0].Email, "@"))
 }
 
@@ -48,7 +48,6 @@ func TestGetUserByEmail(t *testing.T) {
 	err := json.Unmarshal(resp.Body.Bytes(), &user)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, user)
 	assert.Equal(t, "khan", user.Name)
 }
 
@@ -82,7 +81,7 @@ func TestAddUser(t *testing.T) {
 	r.POST("/users/add", addUser)
 	body := `{
 		"name": "test",
-		"email": "test@example.com"
+		"email": "test@example.commm"
 	}`
 
 	req, _ := http.NewRequest(http.MethodPost, "/users/add", strings.NewReader(body))
@@ -90,9 +89,9 @@ func TestAddUser(t *testing.T) {
 
 	r.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	_, u := userDb.GetUserByEmail("test@example.com")
+	_, u := userDb.GetUserByEmail("test@example.commm")
 	assert.NotEqual(t, nil, u)
 	assert.Equal(t, "test", u.Name)
 
@@ -111,7 +110,7 @@ func TestDeleteUserWithEmail(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 
-	i, _ := userDb.GetUserByEmail("test@example.com")
+	i, _ := userDb.GetUserByEmail("zohaib@example.com")
 	assert.Equal(t, -1, i)
 
 }

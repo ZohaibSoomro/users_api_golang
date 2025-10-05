@@ -138,7 +138,7 @@ func addUser(c *gin.Context) {
 		writeError(c, http.StatusInternalServerError, "Unable to add user: "+err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "user added successfully."})
+	c.JSON(http.StatusCreated, gin.H{"message": "user added successfully."})
 }
 
 // WriteError writes an error response in JSON.
