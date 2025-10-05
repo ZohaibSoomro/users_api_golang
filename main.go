@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	api := api.NewApi("localhost:8080")
+	api := api.NewApiWithAddress("localhost:8080")
 	server := api.RegisterHandlers()
 	log.Println("Started server at :8080")
 	log.Fatal(server.Run(api.Address))

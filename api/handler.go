@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,41 +11,54 @@ import (
 	"github.com/zohaibsoomro/users_api_golang/utils"
 )
 
-var userDb = utils.NewUsersDB("/Users/zohaib/Documents/Golang/GolangPractice/users.json")
-
 type Api struct {
 	Address string
+	Db      *utils.UsersDB
 }
 
-func NewApi(address string) *Api {
+const DefaultAddress = "localhost:8080"
+
+func NewApi() *Api {
+	return &Api{
+		Address: DefaultAddress,
+		Db:      utils.NewUsersDB(),
+	}
+}
+func NewApiWithAddress(address string) *Api {
 	return &Api{
 		Address: address,
+		Db:      utils.NewUsersDB(),
 	}
 }
 
 func (api *Api) RegisterHandlers() *gin.Engine {
 	server := gin.Default()
 
-	server.GET("/", helloWorld)
-	server.GET("/users", getAllUsers)
-	server.POST("/users/add", addUser)
-	server.GET("/users/:email", getUserWithEmail)
-	server.PUT("/users/update/:email", updateUserWithEmail)
-	server.DELETE("/users/delete/:email", deleteUserWithEmail)
+	server.GET("/", api.HelloWorld)
+	server.GET("/users", api.GetAllUsers)
+	server.POST("/users/add", api.AddUser)
+	server.GET("/users/:email", api.GetUserWithEmail)
+	server.PUT("/users/update/:email", api.UpdateUserWithEmail)
+	server.DELETE("/users/delete/:email", api.DeleteUserWithEmail)
+	server.GET("/users/shutdown", func(c *gin.Context) {
+		c.JSON(200, "Shutting down server...")
+		os.Exit(0)
+	})
 	return server
 }
 
-func helloWorld(c *gin.Context) {
+func (api *Api) HelloWorld(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(`<h1>Welcome Back!</h1>`))
 }
 
-func getAllUsers(c *gin.Context) {
-	users := userDb.GetAllUsers()
+func (api *Api) GetAllUsers(c *gin.Context) {
+	var users *[]models.User
+	api.Db.DB.Find(&users)
 
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, &users)
 
 }
-func getUserWithEmail(c *gin.Context) {
+func (api *Api) GetUserWithEmail(c *gin.Context) {
 
 	email := strings.ToLower(strings.TrimSpace(c.Param("email")))
 
@@ -59,7 +73,7 @@ func getUserWithEmail(c *gin.Context) {
 	}
 
 	// Lookup user
-	_, user := userDb.GetUserByEmail(email)
+	user := api.Db.GetUserByEmail(email)
 	if user == nil {
 		writeError(c, http.StatusNotFound, "User not found!")
 
@@ -69,7 +83,7 @@ func getUserWithEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func updateUserWithEmail(c *gin.Context) {
+func (api *Api) UpdateUserWithEmail(c *gin.Context) {
 
 	email := strings.TrimSpace(c.Param("email"))
 
@@ -94,7 +108,7 @@ func updateUserWithEmail(c *gin.Context) {
 		return
 	}
 
-	if err := userDb.UpdateUserByEmail(email, &user); err != nil {
+	if err := api.Db.UpdateUserByEmail(email, &user); err != nil {
 		writeError(c, http.StatusInternalServerError, "Unable to update user: "+err.Error())
 		return
 	}
@@ -103,7 +117,7 @@ func updateUserWithEmail(c *gin.Context) {
 
 }
 
-func deleteUserWithEmail(c *gin.Context) {
+func (api *Api) DeleteUserWithEmail(c *gin.Context) {
 
 	email := strings.TrimSpace(c.Param("email"))
 
@@ -112,7 +126,7 @@ func deleteUserWithEmail(c *gin.Context) {
 		return
 	}
 
-	err := userDb.DeleteUserByEmail(email)
+	err := api.Db.DeleteUserByEmail(email)
 	if err != nil {
 		writeError(c, http.StatusNotAcceptable, "Error while deleting user: "+err.Error())
 		return
@@ -120,7 +134,7 @@ func deleteUserWithEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully!"})
 }
 
-func addUser(c *gin.Context) {
+func (api *Api) AddUser(c *gin.Context) {
 
 	var u models.User
 	if err := c.ShouldBindBodyWithJSON(&u); err != nil {
@@ -133,7 +147,7 @@ func addUser(c *gin.Context) {
 		return
 	}
 
-	err := userDb.AddUser(u)
+	err := api.Db.AddUser(u)
 	if err != nil {
 		writeError(c, http.StatusInternalServerError, "Unable to add user: "+err.Error())
 		return

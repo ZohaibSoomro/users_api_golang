@@ -1,89 +1,75 @@
 package utils
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"log"
 	"strings"
 	"sync"
 
 	"github.com/zohaibsoomro/users_api_golang/models"
+	"gorm.io/gorm"
 )
 
 type UsersDB struct {
-	users    []models.User
-	lock     *sync.Mutex
-	filename string
+	DB   *gorm.DB
+	lock *sync.Mutex
 }
 
-func NewUsersDB(file string) *UsersDB {
+func NewUsersDB() *UsersDB {
 	db := &UsersDB{
-		users:    make([]models.User, 0),
-		lock:     &sync.Mutex{},
-		filename: file,
+		DB:   NewDb(),
+		lock: &sync.Mutex{},
 	}
-	db.LoadAllUsers()
+
 	return db
 }
 
-func (db *UsersDB) LoadAllUsers() error {
-	bytes, err := os.ReadFile(db.filename)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(bytes, &db.users)
-	if err != nil {
-
-		return fmt.Errorf("unable to parse json: %w", err)
-	}
-	return nil
-}
-
 func (db *UsersDB) ListAllUsers() {
-	for _, u := range db.users {
+	for _, u := range db.GetAllUsers() {
 		fmt.Printf("Id: %v, Name: %v, Email: %v\n", u.Id, u.Name, u.Email)
 	}
 }
 
 func (db *UsersDB) GetAllUsers() []models.User {
-	return db.users
+	var users []models.User
+	dbb := db.DB.Find(&users)
+	if dbb.Error != nil {
+		log.Fatal("Error getting all users:", dbb.Error)
+	}
+	return users
 }
 
-func (db *UsersDB) GetUserByEmail(email string) (int, *models.User) {
+func (db *UsersDB) GetUserByEmail(email string) *models.User {
 	email = strings.TrimSpace(email)
-	for idx, user := range db.users {
-		if strings.EqualFold(email, user.Email) {
-			return idx, &db.users[idx]
-		}
+	var user models.User
+	result := db.DB.First(&user, "email=?", email)
+	if result.Error != nil {
+		// if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// 	fmt.Println("User not found")
+		// } else {
+		// 	fmt.Println("Error:", result.Error)
+		// }
+		return nil
 	}
-	return -1, nil
+	return &user
 }
 
 func (db *UsersDB) AddUser(user models.User) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	_, u := db.GetUserByEmail(user.Email)
+	u := db.GetUserByEmail(user.Email)
 	if u != nil {
 		return errors.New("user already exists with that email")
 	}
-	id := 1
-	if len(db.users) > 0 {
-		id = db.users[len(db.users)-1].Id + 1
-	}
-	user.Id = id
-	db.users = append(db.users, user)
-	bytes, err := json.MarshalIndent(&db.users, "", "\t")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(db.filename, bytes, 0644); err != nil {
-		return err
+
+	db.DB.Create(&user)
+	if user.Id < 0 || db.DB.Error != nil {
+		return fmt.Errorf("error while adding user: %v", db.DB.Error.Error())
 	}
 
-	fmt.Println("User added.")
-	db.LoadAllUsers()
+	// fmt.Println("User added.")
 	return nil
 }
 
@@ -91,25 +77,15 @@ func (db *UsersDB) DeleteUserByEmail(email string) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 	email = strings.TrimSpace(email)
-	i, u := db.GetUserByEmail(email)
-	if u != nil {
-		db.users = append(db.users[:i], db.users[i+1:]...)
-		bytes, err := json.MarshalIndent(&db.users, "", "\t")
-		if err != nil {
-			return fmt.Errorf("unable to parse string to json: %w", err)
-		}
-		err = os.WriteFile(db.filename, bytes, 0644)
-		if err != nil {
-			return fmt.Errorf("unable to write json to file: %w", err)
-		}
-		fmt.Println("Deleted User\nName:", u.Name, "\nEmail:", u.Email)
-		db.LoadAllUsers()
-		err = nil
-
-	} else {
-		fmt.Println("No user found for", email)
-		return errors.New("user not found")
+	u := db.GetUserByEmail(email)
+	if u == nil {
+		return fmt.Errorf("unable to find user")
 	}
+
+	if err := db.DB.Delete(u, u.Id).Error; err != nil {
+		return fmt.Errorf("unable to update user: %v", err.Error())
+	}
+
 	return nil
 
 }
@@ -118,25 +94,15 @@ func (db *UsersDB) UpdateUserByEmail(email string, u *models.User) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 	email = strings.TrimSpace(email)
-	idx, user := db.GetUserByEmail(email)
+	user := db.GetUserByEmail(email)
 
 	if user == nil {
 		return errors.New("user not found")
 	}
-
-	db.users[idx].Email = u.Email
-	db.users[idx].Name = u.Name
-
-	bytes, err := json.MarshalIndent(&db.users, "", "\t")
-	if err != nil {
-		return fmt.Errorf("unable to parse string to Json: %w", err)
+	u.Id = user.Id
+	if err := db.DB.Save(u).Error; err != nil {
+		return fmt.Errorf("unable to update user: %v", err.Error())
 	}
-	err = os.WriteFile(db.filename, bytes, 0644)
-	if err != nil {
-		return fmt.Errorf("unable to write json to file: %w", err)
-	}
-	fmt.Println("User Updated")
 
-	db.LoadAllUsers()
 	return nil
 }
